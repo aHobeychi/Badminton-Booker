@@ -22,7 +22,23 @@ jobs:
         with:
           python-version: '3.10'
           cache: 'pip'
-      
+      - name: Install system dependencies for Playwright
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2 \
+            libffi-dev \
+            libx264-dev \
+            libnss3 \
+            libatk-bridge2.0-0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxrandr2 \
+            libgbm1 \
+            libgtk-3-0 \
+            libdrm2 \
+            libxshmfence1 \
+            libxcb-dri3-0
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -30,11 +46,7 @@ jobs:
       
       - name: Install Playwright browsers
         run: |
-          python -m playwright install --with-deps
-      - name: Install Playwright browsers
-        run: |
-          python -m playwright install chromium
-      
+          python -m playwright install --with-deps      
       - name: Run badminton booker script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
