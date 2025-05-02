@@ -1,30 +1,17 @@
 #!/usr/bin/env python3
-# book.py - Python version of the badminton booker script
+"""Badminton court booking and availability checking module."""
 
-import asyncio
-import argparse
 import json
-import subprocess
 import os
 from datetime import datetime, timedelta
-from pathlib import Path
 from playwright.async_api import async_playwright
-from notify import send_notification, notify_about_reservations
 from dotenv import load_dotenv
 
 # Load environment variables from .env file if it exists
 load_dotenv()
 
-def parse_args():
-    """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="Badminton court booking automation")
-    parser.add_argument("--headless", action="store_true", help="Run in headless mode")
-    parser.add_argument("-slow", type=int, default=10, help="Slow mode delay in milliseconds")
-    parser.add_argument("-test", default=False, action="store_true", help="Run in test mode")
-    return parser.parse_args()
-
 def generate_selected_date() -> list[str]:
-    """Selected date will be the next 4 days from today as a list of strings. using a two difit format."""
+    """Selected date will be the next 4 days from today as a list of strings using a two digit format."""
     today = datetime.now()
     selected_dates = []
     for i in range(4):
@@ -38,14 +25,15 @@ async def select_time_on_page(page):
     await page.locator('#u6510_edFacilityReservationSearchStartTime').get_by_role('textbox', name='HH').click()
     await page.locator('#u6510_edFacilityReservationSearchStartTime').get_by_role('textbox', name='HH').fill('18')
     await page.locator('#u6510_edFacilityReservationSearchStartTime').get_by_role('textbox', name='MM').click()
-    await page.locator('#u6510_edFacilityReservationSearchStartTime').get_by_role('textbox', name='MM').fill('30')
+    await page.locator('#u6510_edFacilityReservationSearchStartTime').get_by_role('textbox', name='MM').fill('00')
     
     # Finish Time
     await page.locator('#u6510_edFacilityReservationSearchEndTime').get_by_role('textbox', name='HH').click()
     await page.locator('#u6510_edFacilityReservationSearchEndTime').get_by_role('textbox', name='HH').fill('22')
     await page.locator('#u6510_edFacilityReservationSearchEndTime').get_by_role('textbox', name='HH').press('Enter')
 
-async def generate_avaiable_booking_list(reservation_elements):
+async def generate_available_booking_list(reservation_elements):
+    """Generate a list of available bookings from reservation elements."""
     reservations = []
     print(f'Found {len(reservation_elements)} reservation elements')
     
@@ -111,18 +99,17 @@ async def generate_avaiable_booking_list(reservation_elements):
 
     return reservations
 
-async def main():
-    # Parse command line arguments
-    args = parse_args()    
+async def check_available_courts(args):
+    """Check available badminton courts and return results."""
     is_headless = args.headless
     slow_mo_value = args.slow
     test_mode = args.test
 
-    # Get neighborhoods from environment variables or use default values
+    # Get neighborhoods from environment variables
     neighborhoods_str = os.environ.get('NEIGHBORHOODS', '')
     neighborhoods = [n.strip() for n in neighborhoods_str.split(',')]
     
-    select_time = False
+    select_time = True
     TIME_TO_WAIT_FOR_SEARCH_RESULTS = 10000  # 10 seconds
     
     async with async_playwright() as p:
@@ -134,11 +121,11 @@ async def main():
         
         page = await browser.new_page()
         
-        # Replace the hardcoded URL with the one from the .env file
+        # Get the booking URL from the .env file
         url = os.getenv('BOOKING_URL', '')
         if not url:
             print("Please set the BOOKING_URL environment variable.")
-            return
+            return None
         
         await page.goto(url)
         
@@ -184,99 +171,25 @@ async def main():
         except Exception as e:
             print('No reservation panels found within timeout. The page might not have loaded or there are no results.')
         
-        # Extract reservation data using Python instead of JavaScript
-        # Get all reservation elements
+        # Extract reservation data
         reservation_elements = await page.query_selector_all('.panel.panel-default.panel-facilityReservation')
-        reservations = await generate_avaiable_booking_list(reservation_elements)
-
-        # print(f'Found {len(reservation_elements)} reservation elements')
-        
-        # for element in reservation_elements:
-        #     # Extract name
-        #     name_element = await element.query_selector('.panel-heading .fake-link')
-        #     name = await name_element.text_content() if name_element else ""
-        #     name = name.strip() if name else ""
-            
-        #     # Extract date and time information
-        #     date_elements = await element.query_selector_all('.panel-body .when')
-            
-        #     date = ""
-        #     start_time = ""
-        #     end_time = ""
-            
-        #     if date_elements and len(date_elements) > 0:
-        #         date_text = await date_elements[0].text_content()
-        #         date_parts = date_text.split(',')
-                
-        #         if len(date_parts) > 1:
-        #             date = date_parts[1].strip()
-                
-        #         if len(date_parts) > 2:
-        #             start_time = date_parts[2].strip()
-            
-        #     if date_elements and len(date_elements) > 1:
-        #         end_time_text = await date_elements[1].text_content()
-        #         end_time = end_time_text.strip()
-            
-        #     # Extract price
-        #     price = ""
-        #     price_elements = await element.query_selector_all(".panel-body .ng-binding")
-            
-        #     for price_el in price_elements:
-        #         price_text = await price_el.text_content()
-        #         if "$" in price_text:
-        #             price = price_text.replace("$", "").strip()
-            
-        #     # Check if the facility can be reserved
-        #     reserve_button = await element.query_selector('button[ng-click*="vm.onReserve"]')
-        #     can_reserve = False
-        #     button_id = None
-            
-        #     if reserve_button:
-        #         # Check if button has 'disabled' class
-        #         button_classes = await reserve_button.get_attribute('class')
-        #         can_reserve = 'disabled' not in button_classes if button_classes else False
-                
-        #         # Get button ID if available
-        #         button_id = await reserve_button.get_attribute('id')
-            
-        #     # Add the extracted data to the result array
-        #     reservations.append({
-        #         'name': name,
-        #         'date': date,
-        #         'startTime': start_time,
-        #         'endTime': end_time,
-        #         'price': price,
-        #         'canReserve': can_reserve,
-        #         'buttonId': button_id
-        #     })
+        reservations = await generate_available_booking_list(reservation_elements)
         
         # Capture current URL before closing the browser
         current_url = page.url
-        print(f'Current URL: {current_url}')
         
-        # Save results to file for the notification script to read
-        try:
-            result_data = {
-                'reservations': reservations,
-                'url': current_url,
-                'timestamp': datetime.now().isoformat()
-            }
-            
-            if test_mode:
-                with open('badminton_results.json', 'w') as f:
-                    json.dump(result_data, f, indent=2)
-                print('Results saved to badminton_results.json')
-            
-            # Send notification directly using the imported function
-            print('Sending notification about reservations...')
-            notify_about_reservations(result_data)
-            
-        except Exception as e:
-            print(f'Failed to save results or send notification: {e}')
+        # Prepare results data
+        result_data = {
+            'reservations': reservations,
+            'url': current_url,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        # Save results to file if in test mode
+        if test_mode:
+            with open('data/badminton_results.json', 'w') as f:
+                json.dump(result_data, f, indent=2)
+            print('Results saved to data/badminton_results.json')
         
         await browser.close()
-
-# Run the main async function
-if __name__ == "__main__":
-    asyncio.run(main())
+        return result_data

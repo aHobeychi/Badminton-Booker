@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "badminton-booker"
+version = "0.1.0"
+description = "Automated tool to get notified when badminton courts are available"
+readme = "README.MD"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Alex Hobeychi"}
+]
+dependencies = [
+    "playwright>=1.40.0",
+    "requests>=2.31.0", 
+    "python-telegram-bot>=13.15",
+    "python-dotenv>=1.0.0",
+    "firebase-admin>=6.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "isort>=5.0.0",
+]
+
+[project.scripts]
+badminton-booker = "badminton_booker.cli.commands:main"
+
+[tool.setuptools]
+packages = ["badminton_booker"]
+
+[tool.pytest]
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 88
+target-version = ["py39"]
+
+[tool.isort]
+profile = "black"
+line_length = 88

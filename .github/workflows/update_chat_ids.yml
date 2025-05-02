@@ -1,18 +1,20 @@
-name: Badminton Court Booking
+name: Update Chat IDs
 
 on:
   schedule:
-      - cron: '0 9-23/3 * * 1,2,4,5,6,0'  # Monday (1), Tuesday (2), Thursday (4), Friday (5), Saturday (6), Sunday (0)
+      - cron: '0 0 * * *'  # Once a day at Midnight UTC
+  # Allow manual trigger
   workflow_dispatch:
 
 jobs:
-  book_badminton:
-    name: Check for available badminton courts
-    runs-on: ubuntu-22.04
-    
+  update_chat_ids:
+    name: Check for any new chat IDs
+    runs-on: ubuntu-latest
+  
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -21,20 +23,15 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install .
-      - name: Install Playwright browsers
-        run: |
-          python -m playwright install --with-deps chromium    
+          pip install requests python-telegram-bot python-dotenv firebase-admin
       - name: Setup Firebase Certificate
         run: |
           echo "Setting up Firebase certificate"
           echo "${{ secrets.FIREBASE_CERTIFICATE_VALUE }}" | base64 --decode > badminton_booker/datastore/firebase_certificate.json
-      - name: Run badminton booker script
+
+      - name: Run Update Chat IDs script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          NEIGHBORHOODS: ${{ secrets.NEIGHBORHOODS }}
-          BOOKING_URL: ${{ secrets.BOOKING_URL }}
           FIREBASE_CERT_PATH: badminton_booker/datastore/firebase_certificate.json
         run: |
-          python main.py --headless
+          python badminton_booker/datastore/chat_id_service.py

@@ -1,6 +1,25 @@
 # Badminton Booker
 
-An automated tool be get notified when a badminton court is available for booking. This is done for my own personal use not for any business use.
+An automated tool to get notified when a badminton court is available for booking. This is for personal use, not for business purposes.
+
+## Project Structure
+
+The project now follows a well-organized Python package structure:
+
+```
+badminton-booker/
+│
+├── badminton_booker/           # Main package directory
+│   ├── booking/                # Booking related functionality
+│   ├── notification/           # Notification functionality
+│   ├── config/                 # Configuration handling
+│   └── cli/                    # Command line interfaces
+│
+├── scripts/                    # Utility scripts
+├── tests/                      # Test directory
+├── data/                       # Data directory for output files
+└── docs/                       # Documentation
+```
 
 ## Prerequisites
 
@@ -15,16 +34,17 @@ The easiest way to set up the project is using the included setup script:
 
 ```bash
 # Make the setup script executable (if needed)
-chmod +x setup.sh
+chmod +x scripts/setup.sh
 
 # Run the setup script
-./setup.sh
+./scripts/setup.sh
 ```
 
 This will:
 1. Create a virtual environment
 2. Install all required dependencies
 3. Set up Playwright browser for automation
+4. Create a .env file template for you to fill in
 
 ### Option 2: Manual Setup
 
@@ -55,26 +75,46 @@ TELEGRAM_CHAT_ID=your_chat_id_here
 
 # Badminton Booking Configuration
 NEIGHBORHOODS=Ahuntsic - Cartierville,Saint-Laurent
+BOOKING_URL=https://your-booking-website-url.com
 ```
 
 Copy the `.env.example` file to `.env` and update the values.
+
+## Getting Your Telegram Chat ID
+
+To get your Telegram chat ID, use the provided script:
+
+```bash
+chmod +x scripts/get_chat_ids.sh
+./scripts/get_chat_ids.sh
+```
+
+Follow the instructions provided by the script to get your chat ID.
 
 ## Running the Application
 
 With the virtual environment activated, run the booking script:
 
 ```bash
-python book.py
+python main.py
 ```
 
 ### Command Line Options
 
 ```bash
 # Run in headless mode (no browser UI)
-python book.py --headless
+python main.py --headless
 
 # Run in test mode (saves results to JSON file)
-python book.py --test
+python main.py --test
+```
+
+## Testing
+
+Run the tests with:
+
+```bash
+python -m unittest discover tests
 ```
 
 ## Telegram Notifications
@@ -84,8 +124,12 @@ The application uses Telegram to send notifications about available courts. Make
 To test the notification system:
 
 ```bash
-python notify.py
+python -m badminton_booker.notification.telegram
 ```
+<div align="center">
+    <img src="docs/images/telegram_result_example.jpeg"  height="500"/>
+</div>
+Sample of the telegram notification
 
 ## Automated Running with GitHub Actions
 
@@ -97,7 +141,7 @@ To set up GitHub Actions:
 2. Set up the required secrets in your GitHub repository
 3. The workflow will run automatically on the configured schedule
 
-See [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md) for detailed instructions on setting up the required GitHub secrets.
+See [GITHUB_ACTIONS_SETUP.md](docs/GITHUB_ACTIONS_SETUP.md) for detailed instructions on setting up the required GitHub secrets.
 
 ## Testing GitHub Actions Locally
 
@@ -121,6 +165,7 @@ Create a `.secrets` file in the project root to store environment variables:
 TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_CHAT_ID=your_chat_id
 NEIGHBORHOODS=your_neighborhoods
+FIREBASE_CERT_PATH=path/to/your/firebase_service_account.json
 ```
 
 ### Run the Workflow
@@ -132,7 +177,3 @@ act -j book_badminton --secret-file .secrets
 ```
 
 This executes just the `book_badminton` job from your workflow.
-
-## Pipeline Integration
-
-To integrate with other CI/CD pipelines, use the setup script or requirements.txt file to install all necessary dependencies.
