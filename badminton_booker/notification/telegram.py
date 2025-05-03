@@ -76,8 +76,12 @@ def notify_about_reservations(reservations_data):
         message = "🏸 <b>Badminton Reservations Available:</b>\n\n"
 
         for i, res in enumerate(bookable_reservations, 1):
+            # Format the start and end times correctly
+            start_time = res.get("startTime", "").strip()
+            end_time = res.get("endTime", "").strip()
+            
             message += f"{i}. <b>{res.get('name', 'Unknown Location')}</b>\n"
-            message += f"   📅 {res.get('date', 'No date')} {res.get('startTime', '')} - {res.get('endTime', '')}\n"
+            message += f"   📅 {res.get('date', 'No date')} {start_time} - {end_time}\n"
             message += f"   💰 ${res.get('price', 'N/A')}\n\n"
 
         # Include URL if available

@@ -187,7 +187,7 @@ async def check_available_courts(args):
         
         # Save results to file if in test mode
         if test_mode:
-            with open('data/badminton_results.json', 'w') as f:
+            with open('docs/badminton_results.json', 'w') as f:
                 json.dump(result_data, f, indent=2)
             print('Results saved to data/badminton_results.json')
         
