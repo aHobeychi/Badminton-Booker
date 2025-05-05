@@ -21,7 +21,6 @@ class Settings:
         ]
         self.booking_url = os.environ.get('BOOKING_URL', '')
         self.data_dir = Path('data')
-        
         # Create data directory if it doesn't exist
         self.data_dir.mkdir(exist_ok=True)
         

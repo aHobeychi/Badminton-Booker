@@ -4,6 +4,7 @@
 import requests
 import os
 from dotenv import load_dotenv
+from badminton_booker.booking.handle_time import convert_to_proper_timezone
 from badminton_booker.datastore.chat_id_service import fetch_chat_ids_from_firestore
 
 # Load environment variables from .env file if it exists
@@ -63,6 +64,11 @@ def notify_about_reservations(reservations_data):
     try:
         # Extract reservations and filter for bookable ones
         reservations = reservations_data.get("reservations", [])
+        timezone = reservations_data.get("timezone", "")
+
+        if timezone not in ["EDT", "EST"]:
+            print(f"Host timezone is: {timezone}, will convert times to EST/EDT.")
+
         bookable_reservations = [
             res for res in reservations if res.get("canReserve", False)
         ]
@@ -77,11 +83,13 @@ def notify_about_reservations(reservations_data):
 
         for i, res in enumerate(bookable_reservations, 1):
             # Format the start and end times correctly
-            start_time = res.get("startTime", "").strip()
-            end_time = res.get("endTime", "").strip()
+            start_time = convert_to_proper_timezone(res.get("startTime"))
+            dateText = start_time.strftime('%A %-d %B')
+            start_time = start_time.strftime('%H:%M')
+            end_time = convert_to_proper_timezone(res.get("endTime")).strftime('%H:%M')
             
             message += f"{i}. <b>{res.get('name', 'Unknown Location')}</b>\n"
-            message += f"   📅 {res.get('date', 'No date')} {start_time} - {end_time}\n"
+            message += f"   📅 {dateText}: {start_time} - {end_time}\n"
             message += f"   💰 ${res.get('price', 'N/A')}\n\n"
 
         # Include URL if available

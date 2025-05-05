@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timedelta
 from playwright.async_api import async_playwright
 from dotenv import load_dotenv
+from badminton_booker.booking.handle_time import generate_time_object
 
 # Load environment variables from .env file if it exists
 load_dotenv()
@@ -90,8 +91,8 @@ async def generate_available_booking_list(reservation_elements):
         reservations.append({
             'name': name,
             'date': date,
-            'startTime': start_time,
-            'endTime': end_time,
+            'startTime': generate_time_object(date, start_time) if start_time else None,
+            'endTime': generate_time_object(date, end_time) if end_time else None,
             'price': price,
             'canReserve': can_reserve,
             'buttonId': button_id
@@ -110,7 +111,7 @@ async def check_available_courts(args):
     neighborhoods = [n.strip() for n in neighborhoods_str.split(',')]
     
     select_time = True
-    TIME_TO_WAIT_FOR_SEARCH_RESULTS = 10000  # 10 seconds
+    TIME_TO_WAIT_FOR_SEARCH_RESULTS = 12000  # 12 seconds
     
     async with async_playwright() as p:
         # Browser Launch options
@@ -169,7 +170,7 @@ async def check_available_courts(args):
             # Wait for reservation panels to appear
             await page.wait_for_selector('.panel.panel-default.panel-facilityReservation', timeout=TIME_TO_WAIT_FOR_SEARCH_RESULTS)
         except Exception as e:
-            print('No reservation panels found within timeout. The page might not have loaded or there are no results.')
+            print('Finished waiting for the calendar.')
         
         # Extract reservation data
         reservation_elements = await page.query_selector_all('.panel.panel-default.panel-facilityReservation')
@@ -182,13 +183,13 @@ async def check_available_courts(args):
         result_data = {
             'reservations': reservations,
             'url': current_url,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'timezone': datetime.now().astimezone().tzname()
         }
         
-        # Save results to file if in test mode
         if test_mode:
             with open('docs/badminton_results.json', 'w') as f:
-                json.dump(result_data, f, indent=2)
+                json.dump(result_data, f, indent=2, default=str)
             print('Results saved to data/badminton_results.json')
         
         await browser.close()
