@@ -4,7 +4,7 @@
 import requests
 import os
 from dotenv import load_dotenv
-from badminton_booker.booking.handle_time import convert_to_proper_timezone
+from datetime import datetime
 from badminton_booker.datastore.chat_id_service import fetch_chat_ids_from_firestore
 
 # Load environment variables from .env file if it exists
@@ -30,7 +30,13 @@ def send_notification(message=None):
 
         # Create the Telegram API URL
         url = f"https://api.telegram.org/bot{token}/sendMessage"
-
+        
+        # If no chat IDs, return success (nothing to do)
+        if not chat_ids:
+            return True
+            
+        all_success = True
+        
         for chat_id in chat_ids:
             # Request parameters
             params = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
@@ -46,6 +52,9 @@ def send_notification(message=None):
                     f"Failed to send notification. Status code: {response.status_code}"
                 )
                 print(f"Response: {response.json()}")
+                all_success = False
+
+        return all_success
 
     except Exception as e:
         print(f"Failed to send notification: {e}")
@@ -64,11 +73,7 @@ def notify_about_reservations(reservations_data):
     try:
         # Extract reservations and filter for bookable ones
         reservations = reservations_data.get("reservations", [])
-        timezone = reservations_data.get("timezone", "")
-
-        if timezone not in ["EDT", "EST"]:
-            print(f"Host timezone is: {timezone}, will convert times to EST/EDT.")
-
+        
         bookable_reservations = [
             res for res in reservations if res.get("canReserve", False)
         ]
@@ -82,14 +87,21 @@ def notify_about_reservations(reservations_data):
         message = "🏸 <b>Badminton Reservations Available:</b>\n\n"
 
         for i, res in enumerate(bookable_reservations, 1):
-            # Format the start and end times correctly
-            start_time = convert_to_proper_timezone(res.get("startTime"))
-            dateText = start_time.strftime('%A %-d %B')
-            start_time = start_time.strftime('%H:%M')
-            end_time = convert_to_proper_timezone(res.get("endTime")).strftime('%H:%M')
+            # Format the start and end times - they're already in Eastern Time due to browser config
+            start_time = res.get("startTime")
+            # Format the datetime object directly
+            if isinstance(start_time, datetime):
+                dateText = start_time.strftime('%A %-d %B')
+                start_time_str = start_time.strftime('%H:%M')
+                end_time_str = res.get("endTime").strftime('%H:%M') if isinstance(res.get("endTime"), datetime) else "N/A"
+            else:
+                # For backward compatibility if startTime is still a string
+                dateText = "Today"
+                start_time_str = str(start_time)
+                end_time_str = str(res.get("endTime", "N/A"))
             
             message += f"{i}. <b>{res.get('name', 'Unknown Location')}</b>\n"
-            message += f"   📅 {dateText}: {start_time} - {end_time}\n"
+            message += f"   📅 {dateText}: {start_time_str} - {end_time_str}\n"
             message += f"   💰 ${res.get('price', 'N/A')}\n\n"
 
         # Include URL if available
@@ -103,4 +115,3 @@ def notify_about_reservations(reservations_data):
     except Exception as e:
         print(f"Error creating notification: {e}")
         return False
-

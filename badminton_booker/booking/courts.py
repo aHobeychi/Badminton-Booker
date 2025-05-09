@@ -119,8 +119,13 @@ async def check_available_courts(args):
             headless=is_headless,
             slow_mo=slow_mo_value
         )
+
+        context = await browser.new_context(
+            locale='en-US',
+            timezone_id='America/New_York',  # This sets the browser timezone to Eastern Time
+        )
         
-        page = await browser.new_page()
+        page = await context.new_page()
         
         # Get the booking URL from the .env file
         url = os.getenv('BOOKING_URL', '')
