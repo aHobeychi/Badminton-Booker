@@ -2,7 +2,7 @@ name: Update Chat IDs
 
 on:
   schedule:
-      - cron: '0 0 * * *'  # Once a day at Midnight UTC
+      - cron: '0 5 * * *'  # Once a day at Midnight EST (5 AM UTC)
   # Allow manual trigger
   workflow_dispatch:
 
